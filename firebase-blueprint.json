@@ -1,0 +1,74 @@
+{
+  "entities": {
+    "CaseIncident": {
+      "title": "CaseIncident",
+      "description": "Formulario y expediente de caso práctico o incidente de Sistema de Comando de Incidentes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "folio": { "type": "string" },
+        "nombre": { "type": "string" },
+        "lugar": { "type": "string" },
+        "fechaInicio": { "type": "string" },
+        "horaInicio": { "type": "string" },
+        "comandante": { "type": "string" },
+        "ultimaModificacion": { "type": "string" },
+        "sci201": { "type": "object" },
+        "sci202": { "type": "object" },
+        "sci203": { "type": "object" },
+        "sci204": { "type": "object" },
+        "sci205": { "type": "object" },
+        "sci206": { "type": "object" },
+        "sci207": { "type": "object" },
+        "sci208": { "type": "object" },
+        "sci209": { "type": "object" },
+        "sci211": { "type": "object" },
+        "sci214": { "type": "object" },
+        "sci221": { "type": "object" }
+      },
+      "required": ["id", "folio", "nombre"]
+    },
+    "CollaboratorPresence": {
+      "title": "CollaboratorPresence",
+      "description": "Presencia de respondedores y oficiales activos en el caso práctico",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userRole": { "type": "string" },
+        "activeForm": { "type": "string" },
+        "lastSeen": { "type": "number" },
+        "platform": { "type": "string" }
+      },
+      "required": ["userId", "userName", "lastSeen"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Registro en tiempo real de cambios y acciones realizadas por el equipo de comando",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userName": { "type": "string" },
+        "userRole": { "type": "string" },
+        "formId": { "type": "string" },
+        "action": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["id", "userName", "action", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/cases/{caseId}": {
+      "schema": "CaseIncident",
+      "description": "Casos prácticos e incidentes tácticos compartidos en tiempo real"
+    },
+    "/cases/{caseId}/collaborators/{collaboratorId}": {
+      "schema": "CollaboratorPresence",
+      "description": "Respondedores y miembros del equipo de mando conectados al caso"
+    },
+    "/cases/{caseId}/activity/{activityId}": {
+      "schema": "ActivityLog",
+      "description": "Bitácora en vivo de cambios y actualizaciones de los formularios"
+    }
+  }
+}

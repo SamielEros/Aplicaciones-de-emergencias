@@ -1,0 +1,6 @@
+{
+  "name": "Comando de Incidentes iPad - PROY-NOM-010-SEGOB-2016",
+  "description": "Aplicación táctica para iPad con todos los formularios oficiales del Sistema de Comando de Incidentes (SCI) según la Norma Oficial Mexicana PROY-NOM-010-SEGOB-2016.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
