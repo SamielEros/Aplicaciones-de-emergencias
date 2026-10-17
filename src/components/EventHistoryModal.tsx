@@ -66,7 +66,8 @@ export const EventHistoryModal: React.FC<EventHistoryModalProps> = ({
       }
     } catch (e) {
       console.error(e);
-      alert('Error al generar el PDF del expediente.');
+      setSaveSuccessMsg('No se pudo generar el PDF del expediente.');
+      setTimeout(() => setSaveSuccessMsg(null), 3500);
     } finally {
       setIsSharingPdf(false);
     }

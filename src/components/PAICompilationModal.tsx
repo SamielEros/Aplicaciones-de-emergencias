@@ -30,25 +30,27 @@ interface PAICompilationModalProps {
 export const PAICompilationModal: React.FC<PAICompilationModalProps> = ({ incident, onClose, onOpenDrive }) => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [shareSuccessMsg, setShareSuccessMsg] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleConvertAndSharePDF = async () => {
     setIsGeneratingPdf(true);
     setShareSuccessMsg(null);
+    setErrorMessage(null);
     try {
       const result = await generateAndSharePAIPdf(incident);
       if (result.success) {
         if (result.method === 'native_share') {
-          setShareSuccessMsg('¡Documento enviado a compartir exitosamente!');
+          setShareSuccessMsg('¡Expediente PDF integral enviado a compartir exitosamente!');
         } else {
-          setShareSuccessMsg(`¡PDF generado y descargado con éxito: ${result.fileName}!`);
+          setShareSuccessMsg(`¡Expediente PDF completo generado y descargado con éxito: ${result.fileName}!`);
         }
-        setTimeout(() => setShareSuccessMsg(null), 4500);
+        setTimeout(() => setShareSuccessMsg(null), 5000);
       } else {
-        alert(`Ocurrió un inconveniente al generar el PDF: ${result.error || 'Error'}`);
+        setErrorMessage(`Ocurrió un inconveniente al generar el PDF: ${result.error || 'Error'}`);
       }
     } catch (e: any) {
       console.error(e);
-      alert('Error al generar el documento PDF.');
+      setErrorMessage('Error al generar el documento PDF.');
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -84,23 +86,23 @@ export const PAICompilationModal: React.FC<PAICompilationModalProps> = ({ incide
           </div>
 
           <div className="flex items-center gap-2">
-            {/* NUEVO BOTÓN: Convertir a PDF para Compartir (Sustituye imprimir/pdf) */}
+            {/* NUEVO BOTÓN: Convertir a PDF Completo e Integral */}
             <button
               type="button"
               onClick={handleConvertAndSharePDF}
               disabled={isGeneratingPdf}
               className="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-orange-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-              title="Convertir el documento a PDF oficial y compartirlo por AirDrop, WhatsApp, correo o guardar"
+              title="Descargar informe oficial en PDF completo, integral y sin información apilada"
             >
               {isGeneratingPdf ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-                  <span>Generando PDF...</span>
+                  <span>Generando PDF Integral...</span>
                 </>
               ) : (
                 <>
                   <Share2 className="w-4 h-4 text-slate-950" />
-                  <span>Convertir a PDF y Compartir</span>
+                  <span>Informe PDF Integral (Sin Apilar)</span>
                 </>
               )}
             </button>
@@ -134,6 +136,21 @@ export const PAICompilationModal: React.FC<PAICompilationModalProps> = ({ incide
               type="button"
               onClick={() => setShareSuccessMsg(null)}
               className="text-emerald-400 hover:text-white p-0.5"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+        {errorMessage && (
+          <div className="bg-rose-500/15 border-b border-rose-500/30 px-5 py-2 text-rose-300 text-xs font-semibold flex items-center justify-between animate-fadeIn">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-rose-400" />
+              <span>{errorMessage}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setErrorMessage(null)}
+              className="text-rose-400 hover:text-white p-0.5 cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
