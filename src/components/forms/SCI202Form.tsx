@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SCI202Data, PeriodoOperacional, PeriodoOperacionalRegistro } from '../../types/sci';
 import { SignaturePad } from '../SignaturePad';
+import { CruzRojaMexicanaEmblem } from '../CruzRojaMexicanaEmblem';
 import {
   Target,
   Plus,
@@ -15,7 +16,10 @@ import {
   Check,
   ArrowRight,
   Flame,
-  Sparkles
+  Sparkles,
+  AlertTriangle,
+  X,
+  RefreshCw
 } from 'lucide-react';
 
 interface SCI202FormProps {
@@ -58,7 +62,8 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
   });
 
   // Campos manuales del período en edición activa
-  const [periodoEnEdicionId, setPeriodoEnEdicionId] = useState<string>('activo');
+  const [periodoEnEdicionId, setPeriodoEnEdicionId] = useState<string | null>(null);
+  const [periodoAEliminar, setPeriodoAEliminar] = useState<PeriodoOperacionalRegistro | null>(null);
   const [numPeriodoManual, setNumPeriodoManual] = useState<number>(periodo.numero || 1);
   const [fechaInicioManual, setFechaInicioManual] = useState<string>(
     periodo.fechaInicio || new Date().toISOString().slice(0, 10)
@@ -71,20 +76,20 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
   const [descPeriodoManual, setDescPeriodoManual] = useState<string>('Operaciones de Campo');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // Sincronizar estado local si props de período cambian
+  // Sincronizar estado local si props de período cambian y NO estamos en edición manual
   useEffect(() => {
-    if (periodo) {
+    if (periodo && !periodoEnEdicionId) {
       setNumPeriodoManual(periodo.numero || 1);
       if (periodo.fechaInicio) setFechaInicioManual(periodo.fechaInicio);
       if (periodo.horaInicio) setHoraInicioManual(periodo.horaInicio);
       if (periodo.fechaFin) setFechaFinManual(periodo.fechaFin);
       if (periodo.horaFin) setHoraFinManual(periodo.horaFin);
     }
-  }, [periodo.numero, periodo.fechaInicio, periodo.horaInicio, periodo.fechaFin, periodo.horaFin]);
+  }, [periodo.numero, periodo.fechaInicio, periodo.horaInicio, periodo.fechaFin, periodo.horaFin, periodoEnEdicionId]);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3000);
+    setTimeout(() => setToastMsg(null), 3500);
   };
 
   const updateField = (field: keyof SCI202Data, value: any) => {
@@ -128,7 +133,34 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
     );
   };
 
-  // Guardar y sincronizar el período operacional editado manualmente
+  // Cargar un período de la lista al editor manual para corregir errores
+  const cargarPeriodoParaEditar = (p: PeriodoOperacionalRegistro) => {
+    setPeriodoEnEdicionId(p.id || `per-${p.numero}`);
+    setNumPeriodoManual(p.numero);
+    setFechaInicioManual(p.fechaInicio);
+    setHoraInicioManual(p.horaInicio);
+    setFechaFinManual(p.fechaFin);
+    setHoraFinManual(p.horaFin);
+    setDescPeriodoManual(p.descripcion || `Período Operacional Nº ${p.numero}`);
+    showToast(`Cargado Período Nº ${p.numero} en el editor para corregir o modificar.`);
+    // Scroll al editor
+    const el = document.getElementById('seccion-editor-periodo');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Cancelar la edición activa
+  const cancelarEdicion = () => {
+    setPeriodoEnEdicionId(null);
+    setNumPeriodoManual(periodo.numero || 1);
+    setFechaInicioManual(periodo.fechaInicio || new Date().toISOString().slice(0, 10));
+    setHoraInicioManual(periodo.horaInicio || '08:00');
+    setFechaFinManual(periodo.fechaFin || new Date().toISOString().slice(0, 10));
+    setHoraFinManual(periodo.horaFin || '20:00');
+    setDescPeriodoManual('Operaciones de Campo');
+    showToast('Modificación cancelada.');
+  };
+
+  // Guardar y sincronizar el período operacional editado o corregido
   const guardarPeriodoManual = () => {
     const num = Math.max(1, Number(numPeriodoManual) || 1);
     const periodoActualizado: PeriodoOperacional = {
@@ -139,13 +171,13 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
       horaFin: horaFinManual
     };
 
-    // Actualizar lista de períodos
     let nuevosPeriodos: PeriodoOperacionalRegistro[];
-    const existe = listaPeriodos.find((p) => p.numero === num || p.id === periodoEnEdicionId);
+    const esModificacion = !!periodoEnEdicionId;
+    const existe = listaPeriodos.find((p) => p.id === periodoEnEdicionId || p.numero === num);
 
     if (existe) {
       nuevosPeriodos = listaPeriodos.map((p) => {
-        if (p.id === existe.id || p.numero === num) {
+        if (p.id === existe.id || (esModificacion && p.id === periodoEnEdicionId) || p.numero === num) {
           return {
             ...p,
             numero: num,
@@ -182,7 +214,12 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
     if (onUpdatePeriodo) {
       onUpdatePeriodo(periodoActualizado, nuevosPeriodos);
     }
-    showToast(`Período Operacional Nº ${num} guardado y establecido como activo.`);
+    setPeriodoEnEdicionId(null);
+    showToast(
+      esModificacion
+        ? `Período Operacional Nº ${num} modificado y actualizado exitosamente.`
+        : `Período Operacional Nº ${num} guardado y establecido como activo.`
+    );
   };
 
   // Registrar un período consecutivo nuevo que abarque el evento
@@ -194,7 +231,6 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
     const nuevaFechaInicio = ultimoPeriodo ? ultimoPeriodo.fechaFin : new Date().toISOString().slice(0, 10);
     const nuevaHoraInicio = ultimoPeriodo ? ultimoPeriodo.horaFin : '20:00';
 
-    // Por defecto calcula 12 horas después
     const fechaObj = new Date(`${nuevaFechaInicio}T${nuevaHoraInicio}:00`);
     const finObj = new Date(fechaObj.getTime() + 12 * 60 * 60 * 1000);
     const nuevaFechaFin = !isNaN(finObj.getTime()) ? finObj.toISOString().slice(0, 10) : nuevaFechaInicio;
@@ -217,20 +253,7 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
     setListaPeriodos(nuevaLista);
     updateField('periodosOperacionales', nuevaLista);
     showToast(`Período Nº ${sigNum} agregado a la lista del evento.`);
-
-    // Cargar en el editor para que el usuario pueda ajustarlo si lo desea
     cargarPeriodoParaEditar(nuevo);
-  };
-
-  // Cargar un período de la lista al editor manual
-  const cargarPeriodoParaEditar = (p: PeriodoOperacionalRegistro) => {
-    setPeriodoEnEdicionId(p.id || `per-${p.numero}`);
-    setNumPeriodoManual(p.numero);
-    setFechaInicioManual(p.fechaInicio);
-    setHoraInicioManual(p.horaInicio);
-    setFechaFinManual(p.fechaFin);
-    setHoraFinManual(p.horaFin);
-    setDescPeriodoManual(p.descripcion || `Período Operacional Nº ${p.numero}`);
   };
 
   // Activar un período operacional de la lista
@@ -249,32 +272,97 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
     }));
 
     setListaPeriodos(nuevaLista);
-    cargarPeriodoParaEditar(p);
+    setPeriodoEnEdicionId(null);
+    setNumPeriodoManual(p.numero);
+    setFechaInicioManual(p.fechaInicio);
+    setHoraInicioManual(p.horaInicio);
+    setFechaFinManual(p.fechaFin);
+    setHoraFinManual(p.horaFin);
+    setDescPeriodoManual(p.descripcion || `Período Operacional Nº ${p.numero}`);
     updateField('periodosOperacionales', nuevaLista);
 
     if (onUpdatePeriodo) {
       onUpdatePeriodo(periodoActualizado, nuevaLista);
     }
-    showToast(`Período Operacional Nº ${p.numero} activado.`);
+    showToast(`Período Operacional Nº ${p.numero} activado como período vigente.`);
   };
 
-  // Eliminar un período de la lista
-  const eliminarPeriodo = (id?: string, numero?: number) => {
+  // Confirmar y ejecutar eliminación definitiva de un período
+  const confirmarEliminarDefinitivo = () => {
+    if (!periodoAEliminar) return;
+    const target = periodoAEliminar;
+
     if (listaPeriodos.length <= 1) {
-      showToast('Debe haber al menos un período operacional registrado.');
+      // Reiniciar a Período 1 limpio
+      const periodoLimpio: PeriodoOperacionalRegistro = {
+        id: `per-${Date.now()}`,
+        numero: 1,
+        fechaInicio: new Date().toISOString().slice(0, 10),
+        horaInicio: '08:00',
+        fechaFin: new Date().toISOString().slice(0, 10),
+        horaFin: '20:00',
+        descripcion: 'Período 1 - Restablecido',
+        esActivo: true
+      };
+      setListaPeriodos([periodoLimpio]);
+      updateField('periodosOperacionales', [periodoLimpio]);
+      if (onUpdatePeriodo) {
+        onUpdatePeriodo(
+          {
+            numero: 1,
+            fechaInicio: periodoLimpio.fechaInicio,
+            horaInicio: periodoLimpio.horaInicio,
+            fechaFin: periodoLimpio.fechaFin,
+            horaFin: periodoLimpio.horaFin
+          },
+          [periodoLimpio]
+        );
+      }
+      setPeriodoEnEdicionId(null);
+      setNumPeriodoManual(1);
+      setFechaInicioManual(periodoLimpio.fechaInicio);
+      setHoraInicioManual('08:00');
+      setFechaFinManual(periodoLimpio.fechaFin);
+      setHoraFinManual('20:00');
+      setDescPeriodoManual(periodoLimpio.descripcion || 'Período 1 - Restablecido');
+      setPeriodoAEliminar(null);
+      showToast('Período eliminado definitivamente. Restablecido Período 1 en blanco.');
       return;
     }
 
-    const nuevaLista = listaPeriodos.filter((p) => p.id !== id && p.numero !== numero);
-    setListaPeriodos(nuevaLista);
-    updateField('periodosOperacionales', nuevaLista);
+    const nuevos = listaPeriodos.filter((p) => p.id !== target.id && p.numero !== target.numero);
+    setListaPeriodos(nuevos);
+    updateField('periodosOperacionales', nuevos);
 
-    // Si eliminamos el activo, activar el primero disponible
-    const eraActivo = listaPeriodos.find((p) => (p.id === id || p.numero === numero) && p.esActivo);
-    if (eraActivo && nuevaLista.length > 0) {
-      activarPeriodo(nuevaLista[0]);
+    // Si el eliminado era el activo, activar el primero disponible
+    const eraActivo = target.esActivo || target.numero === periodo.numero;
+    if (eraActivo && nuevos.length > 0) {
+      const nuevoActivo = { ...nuevos[0], esActivo: true };
+      const conNuevoActivo = nuevos.map((p, idx) => ({ ...p, esActivo: idx === 0 }));
+      setListaPeriodos(conNuevoActivo);
+      updateField('periodosOperacionales', conNuevoActivo);
+      if (onUpdatePeriodo) {
+        onUpdatePeriodo(
+          {
+            numero: nuevoActivo.numero,
+            fechaInicio: nuevoActivo.fechaInicio,
+            horaInicio: nuevoActivo.horaInicio,
+            fechaFin: nuevoActivo.fechaFin,
+            horaFin: nuevoActivo.horaFin
+          },
+          conNuevoActivo
+        );
+      }
+    } else if (onUpdatePeriodo) {
+      onUpdatePeriodo(periodo, nuevos);
     }
-    showToast('Período eliminado de la lista.');
+
+    if (periodoEnEdicionId === target.id) {
+      setPeriodoEnEdicionId(null);
+    }
+
+    setPeriodoAEliminar(null);
+    showToast(`Período Operacional Nº ${target.numero} eliminado definitivamente.`);
   };
 
   // Cálculo estimativo de horas del período
@@ -306,19 +394,22 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
       {/* Header SCI-202 */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-1 bg-amber-500/20 text-amber-400 font-mono text-xs font-bold rounded-lg border border-amber-500/30">
-                SCI-202
-              </span>
-              <h2 className="text-lg font-bold text-white">Objetivos del Incidente</h2>
-              <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-bold rounded uppercase">
-                Núcleo del PAI
-              </span>
+          <div className="flex items-center gap-3">
+            <CruzRojaMexicanaEmblem size="lg" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 bg-amber-500/20 text-amber-400 font-mono text-xs font-bold rounded-lg border border-amber-500/30">
+                  SCI-202
+                </span>
+                <h2 className="text-lg font-bold text-white">Objetivos del Incidente</h2>
+                <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-bold rounded uppercase">
+                  Núcleo del PAI
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Cruz Roja Mexicana Delegación Tepatitlán · Períodos operacionales y prioridades tácticas aprobadas por el Comandante.
+              </p>
             </div>
-            <p className="text-xs text-slate-400 mt-1">
-              Establece los períodos operacionales que abarcan el evento y las prioridades tácticas aprobadas por el Comandante (PROY-NOM-010-SEGOB).
-            </p>
           </div>
           <div className="bg-slate-950 px-4 py-2.5 rounded-2xl border border-slate-800 text-xs font-mono flex items-center gap-3">
             <div>
@@ -334,18 +425,62 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
       </div>
 
       {/* ======================================================== */}
-      {/* SECCIÓN SOLICITADA: REGISTRO MANUAL DE UNO O VARIOS PERÍODOS */}
+      {/* SECCIÓN SOLICITADA: REGISTRO Y MODIFICACIÓN MANUAL DE PERÍODOS */}
       {/* ======================================================== */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-sm space-y-5">
+      <div id="seccion-editor-periodo" className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-sm space-y-5">
+        {/* Banner de Modo Edición / Corrección de Errores */}
+        {periodoEnEdicionId && (
+          <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/10 border-2 border-amber-500/60 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg shadow-amber-500/10">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                <Edit3 className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-amber-400">
+                    Modo Edición y Corrección Activo
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-amber-500 text-slate-950 font-black text-[10px]">
+                    Período Nº {numPeriodoManual}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Modifique las fechas, horas o descripción para corregir errores de registro y guarde los cambios.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={cancelarEdicion}
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 cursor-pointer transition"
+              >
+                Cancelar Edición
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const target = listaPeriodos.find((p) => p.id === periodoEnEdicionId || p.numero === numPeriodoManual);
+                  if (target) setPeriodoAEliminar(target);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-semibold border border-rose-500/40 flex items-center gap-1 cursor-pointer transition"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Eliminar Definitivamente
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-amber-400" />
             <div>
               <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                Registro y Control Manual de Períodos Operacionales
+                Registro y Control de Períodos Operacionales
               </h3>
               <p className="text-xs text-slate-400">
-                Configure manualmente uno o varios períodos operacionales consecutivos o paralelos que cubran la duración total del incidente.
+                Cree, modifique errores o elimine definitivamente períodos operacionales que cubran la evolución del incidente.
               </p>
             </div>
           </div>
@@ -361,13 +496,13 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
           </div>
         </div>
 
-        {/* Formulario de Entrada Manual del Período */}
+        {/* Formulario de Entrada y Modificación del Período */}
         <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+              <span className={`w-2.5 h-2.5 rounded-full ${periodoEnEdicionId ? 'bg-amber-400 animate-ping' : 'bg-blue-400'}`} />
               <span className="text-xs font-bold text-white uppercase tracking-wider">
-                Entrada Manual de Período Operacional:
+                {periodoEnEdicionId ? `Modificando Período Nº ${numPeriodoManual}:` : 'Entrada de Período Operacional:'}
               </span>
             </div>
             <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono text-[11px] font-bold border border-amber-500/30">
@@ -458,13 +593,23 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
               />
             </div>
 
-            <div className="sm:self-end">
+            <div className="sm:self-end flex items-center gap-2">
+              {periodoEnEdicionId && (
+                <button
+                  type="button"
+                  onClick={cancelarEdicion}
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition cursor-pointer"
+                >
+                  Cancelar
+                </button>
+              )}
               <button
                 type="button"
                 onClick={guardarPeriodoManual}
                 className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all cursor-pointer active:scale-95"
               >
-                <Check className="w-4 h-4" /> Guardar y Activar Período
+                <Check className="w-4 h-4" />
+                {periodoEnEdicionId ? 'Guardar Modificaciones' : 'Guardar y Activar Período'}
               </button>
             </div>
           </div>
@@ -478,18 +623,21 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
               Períodos Registrados para este Evento ({listaPeriodos.length}):
             </span>
             <span className="text-[11px] text-slate-500 font-normal">
-              Haga clic en "Activar" para cambiar el período en vigor del SCI
+              Utilice "Modificar" para corregir errores o "Eliminar" para borrar definitivamente.
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {listaPeriodos.map((p) => {
               const esActivo = p.numero === periodo.numero;
+              const estaEnEdicion = periodoEnEdicionId === (p.id || `per-${p.numero}`);
               return (
                 <div
                   key={p.id || `per-${p.numero}`}
                   className={`rounded-2xl p-4 border transition-all ${
-                    esActivo
+                    estaEnEdicion
+                      ? 'bg-amber-950/40 border-amber-400 ring-2 ring-amber-400/40 shadow-lg shadow-amber-500/20'
+                      : esActivo
                       ? 'bg-amber-950/20 border-amber-500/50 shadow-md shadow-amber-500/10'
                       : 'bg-slate-950 border-slate-800/80 hover:border-slate-700'
                   }`}
@@ -500,8 +648,13 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
                         #{p.numero}
                       </span>
                       <div>
-                        <div className="text-xs font-bold text-white">
-                          Período Operacional {p.numero}
+                        <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <span>Período Operacional {p.numero}</span>
+                          {estaEnEdicion && (
+                            <span className="text-[9px] bg-amber-500 text-slate-950 font-black px-1.5 py-0.2 rounded">
+                              Editando
+                            </span>
+                          )}
                         </div>
                         <div className="text-[10px] text-slate-400 truncate max-w-[170px]">
                           {p.descripcion || 'Sin descripción'}
@@ -536,27 +689,31 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
                     </div>
                   </div>
 
-                  {/* Acciones de Edición y Eliminación */}
-                  <div className="flex items-center justify-end gap-1.5 mt-3 pt-2 border-t border-slate-800/60">
+                  {/* Acciones de Modificación y Eliminación Definitiva */}
+                  <div className="flex items-center justify-between gap-1.5 mt-3 pt-2.5 border-t border-slate-800/80">
                     <button
                       type="button"
                       onClick={() => cargarPeriodoParaEditar(p)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-[11px] font-semibold border border-slate-700/60 flex items-center gap-1 cursor-pointer transition"
-                      title="Cargar en el editor para modificar datos"
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition ${
+                        estaEnEdicion
+                          ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/30'
+                          : 'bg-slate-800/80 hover:bg-amber-500/20 hover:border-amber-500/40 text-amber-300 border border-slate-700/60'
+                      }`}
+                      title="Modificar fecha, horas o descripción para corregir errores"
                     >
-                      <Edit3 className="w-3 h-3 text-amber-400" />
-                      <span>Modificar</span>
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>{estaEnEdicion ? 'Editando...' : 'Modificar'}</span>
                     </button>
-                    {listaPeriodos.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => eliminarPeriodo(p.id, p.numero)}
-                        className="p-1 rounded-lg hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 transition cursor-pointer"
-                        title="Eliminar este período"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setPeriodoAEliminar(p)}
+                      className="px-2.5 py-1.5 rounded-lg bg-rose-950/30 hover:bg-rose-600/20 text-rose-400 hover:text-rose-300 border border-rose-900/40 hover:border-rose-500/50 text-xs font-semibold flex items-center gap-1 cursor-pointer transition"
+                      title="Eliminar este período operacional definitivamente"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Eliminar</span>
+                    </button>
                   </div>
                 </div>
               );
@@ -564,6 +721,54 @@ export const SCI202Form: React.FC<SCI202FormProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Modal de Confirmación de Eliminación Definitiva */}
+      {periodoAEliminar && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border-2 border-rose-500/60 rounded-3xl max-w-md w-full p-6 shadow-2xl shadow-rose-950/50 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-white">
+                  ¿Eliminar Período Operacional Nº {periodoAEliminar.numero}?
+                </h3>
+                <p className="text-xs text-slate-300 mt-1">
+                  Esta acción eliminará de manera definitiva el período de las planificaciones del evento.
+                </p>
+                {listaPeriodos.length === 1 ? (
+                  <div className="mt-2 text-[11px] bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 text-amber-300 font-medium">
+                    ⚠️ Nota: Este es el único período registrado. Al eliminarlo, se restablecerá un Período 1 limpio por defecto.
+                  </div>
+                ) : (
+                  <div className="mt-2 text-[11px] bg-slate-800/80 rounded-xl p-2.5 text-slate-400 font-mono">
+                    Período: {periodoAEliminar.fechaInicio} {periodoAEliminar.horaInicio} – {periodoAEliminar.fechaFin} {periodoAEliminar.horaFin}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setPeriodoAEliminar(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmarEliminarDefinitivo}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-600/30 transition cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                Eliminar Definitivamente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 1. Lista de Objetivos del Incidente (SMART) */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-sm">

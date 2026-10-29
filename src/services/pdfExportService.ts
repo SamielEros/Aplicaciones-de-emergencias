@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { IncidentData } from '../types/sci';
+import { CRUZ_ROJA_EMBLEM_BASE64 } from '../data/cruzRojaEmblem';
 
 export interface ShareResult {
   success: boolean;
@@ -62,18 +63,25 @@ export async function generateAndSharePAIPdf(incident: IncidentData): Promise<Sh
       doc.setFillColor(brandNavy[0], brandNavy[1], brandNavy[2]);
       doc.rect(margin, margin - 6, contentWidth, 14, 'F');
 
-      // Título oficial superior
+      // Emblema Oficial Cruz Roja Mexicana Socorros en el encabezado
+      try {
+        doc.addImage(CRUZ_ROJA_EMBLEM_BASE64, 'PNG', margin + 1.8, margin - 5, 9, 12);
+      } catch (imgErr) {
+        // Fallback sin interrumpir generación
+      }
+
+      // Título oficial superior con Delegación Tepatitlán
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.text('COORDINACIÓN DE SOCORROS · CRUZ ROJA MEXICANA', margin + 3, margin + 2);
+      doc.setFontSize(7.8);
+      doc.text('CRUZ ROJA MEXICANA · DELEGACIÓN TEPATITLÁN · COORDINACIÓN DE SOCORROS', margin + 13, margin + 2);
 
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(6.5);
+      doc.setFontSize(6.2);
       doc.setTextColor(234, 179, 8); // Ámbar
       doc.text(
-        `SISTEMA DE COMANDO DE INCIDENTES (PROY-NOM-010-SEGOB-2016) | FOLIO: ${incident.folio || 'S/F'}`,
-        margin + 3,
+        `SISTEMA DE COMANDO DE INCIDENTES (PROY-NOM-010-SEGOB-2016) | CRUZ ROJA MEXICANA DELEGACIÓN TEPATITLAN | FOLIO: ${incident.folio || 'S/F'}`,
+        margin + 13,
         margin + 6
       );
 
@@ -90,7 +98,7 @@ export async function generateAndSharePAIPdf(incident: IncidentData): Promise<Sh
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(5.8);
       doc.text(
-        `Expediente Oficial PAI · Incidente: ${incident.nombre.slice(0, 45)} · Emitido: ${new Date().toLocaleDateString('es-MX')} ${new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`,
+        `Cruz Roja Mexicana Delegación Tepatitlan · Expediente Oficial PAI · Incidente: ${incident.nombre.slice(0, 42)} · Emitido: ${new Date().toLocaleDateString('es-MX')} ${new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`,
         margin + 3,
         pageHeight - margin + 6.5
       );
@@ -192,28 +200,36 @@ export async function generateAndSharePAIPdf(incident: IncidentData): Promise<Sh
     doc.setFillColor(brandOrange[0], brandOrange[1], brandOrange[2]);
     doc.rect(margin, y, 4, 34, 'F');
 
+    // Emblema Oficial Institucional en la Carátula (Cruz Roja Mexicana - Socorros)
+    try {
+      doc.addImage(CRUZ_ROJA_EMBLEM_BASE64, 'PNG', pageWidth - margin - 26, y + 3, 21, 28);
+    } catch (e) {
+      // Fallback
+    }
+
     // Título Principal
     doc.setTextColor(brandNavy[0], brandNavy[1], brandNavy[2]);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.text('PLAN DE ACCIÓN DEL INCIDENTE (PAI) · EXPEDIENTE INTEGRAL', margin + 8, y + 7.5);
+    doc.setFontSize(12);
+    doc.text('PLAN DE ACCIÓN DEL INCIDENTE (PAI) · EXPEDIENTE INTEGRAL', margin + 8, y + 7.5, { maxWidth: contentWidth - 36 });
 
-    doc.setFontSize(8.5);
+    doc.setFontSize(8.2);
     doc.setTextColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-    doc.text('SISTEMA DE COMANDO DE INCIDENTES — COORDINACIÓN DE SOCORROS', margin + 8, y + 13.5);
+    doc.text('CRUZ ROJA MEXICANA DELEGACIÓN TEPATITLAN — COORDINACIÓN DE SOCORROS', margin + 8, y + 13.5, { maxWidth: contentWidth - 36 });
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
+    doc.setFontSize(10);
     doc.setTextColor(darkSlate[0], darkSlate[1], darkSlate[2]);
-    doc.text(incident.nombre || 'Incidente Operativo', margin + 8, y + 20.5);
+    doc.text(incident.nombre || 'Incidente Operativo', margin + 8, y + 20.5, { maxWidth: contentWidth - 36 });
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
+    doc.setFontSize(6.8);
     doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
     doc.text(
-      `Ubicación: ${incident.lugar || 'N/D'} · Municipio/Estado: ${incident.municipioEstado || 'N/D'} | Tipo: ${incident.tipoIncidente} | Complejidad: ${incident.nivelComplejidad}`,
+      `Entidad: Cruz Roja Mexicana Delegación Tepatitlan · Ubicación: ${incident.lugar || 'N/D'} · Municipio/Estado: ${incident.municipioEstado || 'Tepatitlán de Morelos, Jal.'} | Tipo: ${incident.tipoIncidente} | Complejidad: ${incident.nivelComplejidad}`,
       margin + 8,
-      y + 27
+      y + 27,
+      { maxWidth: contentWidth - 36 }
     );
 
     y += 37;
@@ -226,12 +242,19 @@ export async function generateAndSharePAIPdf(incident: IncidentData): Promise<Sh
     doc.setLineWidth(0.3);
     doc.roundedRect(margin, y, contentWidth, metaBoxHeight, 1.5, 1.5, 'FD');
 
+    // Comandante Activo del Incidente (Prioridad: SCI-203 Organigrama, luego SCI-201, luego raíz)
+    const activeComandante =
+      incident.sci203?.mando?.comandante?.trim() ||
+      incident.sci201?.organizacionInicial?.comandante?.trim() ||
+      incident.comandanteIncidente?.trim() ||
+      'Comandante del Incidente';
+
     const colW = contentWidth / 4;
     const metaItems = [
       { label: 'FOLIO DEL INCIDENTE', val: incident.folio || 'N/D' },
       { label: 'PERÍODO OPERACIONAL', val: `Nº ${incident.periodoOperacional.numero}` },
       { label: 'HORARIO DE VIGENCIA', val: `${incident.periodoOperacional.horaInicio} a ${incident.periodoOperacional.horaFin}` },
-      { label: 'COMANDANTE DEL INCIDENTE', val: incident.comandanteIncidente || 'Por designar' }
+      { label: 'COMANDANTE DEL INCIDENTE', val: activeComandante }
     ];
 
     metaItems.forEach((item, idx) => {
@@ -385,8 +408,99 @@ export async function generateAndSharePAIPdf(incident: IncidentData): Promise<Sh
       y += 2.5;
     }
 
+    // Tabla de Zonas y Perímetros Tácticos Tracker (Croquis SCI-201)
+    const zonasTracker = incident.sci201?.croquisZonas || [];
+    if (zonasTracker.length > 0) {
+      ensureSpace(12);
+      doc.setFillColor(cardBg[0], cardBg[1], cardBg[2]);
+      doc.rect(margin, y, contentWidth, 5, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6);
+      doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+      doc.text('ZONA / CÍRCULO TRACKER', margin + 3, y + 3.5);
+      doc.text('TIPO Y FINALIDAD TÁCTICA', margin + 65, y + 3.5);
+      doc.text('RADIO DE COBERTURA', margin + 120, y + 3.5);
+      doc.text('CENTRO GEOGRÁFICO', margin + contentWidth - 3, y + 3.5, { align: 'right' });
+      y += 5;
+
+      zonasTracker.forEach((zone, zIdx) => {
+        ensureSpace(6);
+        const rowBg = zIdx % 2 === 0 ? white : lightBg;
+        doc.setFillColor(rowBg[0], rowBg[1], rowBg[2]);
+        doc.rect(margin, y, contentWidth, 5.5, 'F');
+        doc.setDrawColor(borderGray[0], borderGray[1], borderGray[2]);
+        doc.line(margin, y + 5.5, margin + contentWidth, y + 5.5);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.setTextColor(37, 99, 235);
+        doc.text(zone.nombre, margin + 3, y + 3.8, { maxWidth: 58 });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(darkSlate[0], darkSlate[1], darkSlate[2]);
+        doc.text(zone.descripcion || zone.tipo, margin + 65, y + 3.8, { maxWidth: 52 });
+
+        doc.setTextColor(202, 138, 4);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6);
+        doc.text(zone.radioMetros ? `~${zone.radioMetros}m (${zone.radio}%)` : `Radio: ${zone.radio}%`, margin + 120, y + 3.8);
+
+        doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+        doc.setFont('helvetica', 'normal');
+        doc.text(zone.coordenadasCentro || `X: ${zone.x}% | Y: ${zone.y}%`, margin + contentWidth - 3, y + 3.8, { align: 'right' });
+
+        y += 5.5;
+      });
+      y += 2.5;
+    }
+
+    // Tabla de Trazos y Rutas Tácticas Trazadas en Mapa (SCI-201)
+    const rutasTrazadas = incident.sci201?.croquisRutas || [];
+    if (rutasTrazadas.length > 0) {
+      ensureSpace(12);
+      doc.setFillColor(cardBg[0], cardBg[1], cardBg[2]);
+      doc.rect(margin, y, contentWidth, 5, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6);
+      doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+      doc.text('RUTA / TRAZO TÁCTICO TRAZADO', margin + 3, y + 3.5);
+      doc.text('TIPO Y FINALIDAD OPERATIVA', margin + 65, y + 3.5);
+      doc.text('PUNTOS / VÉRTICES', margin + 120, y + 3.5);
+      doc.text('DISTANCIA ESTIMADA', margin + contentWidth - 3, y + 3.5, { align: 'right' });
+      y += 5;
+
+      rutasTrazadas.forEach((rt, rIdx) => {
+        ensureSpace(6);
+        const rowBg = rIdx % 2 === 0 ? white : lightBg;
+        doc.setFillColor(rowBg[0], rowBg[1], rowBg[2]);
+        doc.rect(margin, y, contentWidth, 5.5, 'F');
+        doc.setDrawColor(borderGray[0], borderGray[1], borderGray[2]);
+        doc.line(margin, y + 5.5, margin + contentWidth, y + 5.5);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6.5);
+        doc.setTextColor(16, 185, 129);
+        doc.text(rt.nombre, margin + 3, y + 3.8, { maxWidth: 58 });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(darkSlate[0], darkSlate[1], darkSlate[2]);
+        doc.text(rt.descripcion || rt.tipo.replace('_', ' ').toUpperCase(), margin + 65, y + 3.8, { maxWidth: 52 });
+
+        doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+        doc.setFontSize(6);
+        doc.text(`${rt.puntos.length} vértices georreferenciados`, margin + 120, y + 3.8);
+
+        doc.setTextColor(brandOrange[0], brandOrange[1], brandOrange[2]);
+        doc.setFont('helvetica', 'bold');
+        doc.text(rt.distanciaAprox || 'Trazado continuo', margin + contentWidth - 3, y + 3.8, { align: 'right' });
+
+        y += 5.5;
+      });
+      y += 2.5;
+    }
+
     if (incident.sci201?.croquisNotas) {
-      drawTextBox('NOTAS DEL CROQUIS TÁCTICO:', incident.sci201.croquisNotas);
+      drawTextBox('NOTAS DEL CROQUIS TÁCTICO Y RUTAS DE ACCESO:', incident.sci201.croquisNotas);
     }
 
     // =========================================================================
@@ -794,13 +908,14 @@ export async function generateAndSharePAIPdf(incident: IncidentData): Promise<Sh
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6);
       doc.text('#', margin + 2, y + 3.5);
-      doc.text('NOMBRE COMPLETO', margin + 8, y + 3.5);
-      doc.text('EDAD', margin + 56, y + 3.5);
-      doc.text('MOTIVO DE ATENCIÓN', margin + 68, y + 3.5);
-      doc.text('C.P.', margin + 116, y + 3.5);
-      doc.text('UNIDAD', margin + 128, y + 3.5);
-      doc.text('TRIAGE', margin + 152, y + 3.5);
-      doc.text('DESTINO', margin + 172, y + 3.5);
+      doc.text('FECHA / HORA', margin + 7, y + 3.5);
+      doc.text('NOMBRE COMPLETO', margin + 30, y + 3.5);
+      doc.text('EDAD', margin + 74, y + 3.5);
+      doc.text('MOTIVO DE ATENCIÓN', margin + 84, y + 3.5);
+      doc.text('C.P.', margin + 128, y + 3.5);
+      doc.text('UNIDAD', margin + 138, y + 3.5);
+      doc.text('TRIAGE', margin + 158, y + 3.5);
+      doc.text('DESTINO', margin + 176, y + 3.5);
       y += 5;
 
       pacientes.forEach((p, index) => {
@@ -816,29 +931,38 @@ export async function generateAndSharePAIPdf(incident: IncidentData): Promise<Sh
         doc.setTextColor(brandNavy[0], brandNavy[1], brandNavy[2]);
         doc.text(String(index + 1), margin + 2, y + 4.2);
 
+        // Fecha / Hora de captura de la atención
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(5.2);
+        doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
+        const fechaHoraStr = `${p.fechaRegistro || p.fechaAtencion || ''} ${p.horaAtencion || ''}`.trim() || 'N/D';
+        doc.text(fechaHoraStr, margin + 7, y + 4.2, { maxWidth: 22 });
+
         doc.setFont('helvetica', 'bold');
-        doc.text(p.nombre, margin + 8, y + 4.2, { maxWidth: 46 });
+        doc.setFontSize(6);
+        doc.setTextColor(brandNavy[0], brandNavy[1], brandNavy[2]);
+        doc.text(p.nombre, margin + 30, y + 4.2, { maxWidth: 42 });
 
         doc.setFont('helvetica', 'normal');
-        doc.text(String(p.edad || '-'), margin + 56, y + 4.2);
+        doc.text(String(p.edad || '-'), margin + 74, y + 4.2);
 
-        doc.text(p.motivoAtencion, margin + 68, y + 4.2, { maxWidth: 46 });
-        doc.text(p.codigoPostal || 'N/D', margin + 116, y + 4.2);
+        doc.text(p.motivoAtencion, margin + 84, y + 4.2, { maxWidth: 42 });
+        doc.text(p.codigoPostal || 'N/D', margin + 128, y + 4.2);
 
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-        doc.text(p.unidadAtendio, margin + 128, y + 4.2, { maxWidth: 22 });
+        doc.text(p.unidadAtendio, margin + 138, y + 4.2, { maxWidth: 19 });
 
         doc.setFont('helvetica', 'bold');
         if (p.triage.startsWith('Rojo')) doc.setTextColor(220, 38, 38);
         else if (p.triage.startsWith('Amarillo')) doc.setTextColor(202, 138, 4);
         else if (p.triage.startsWith('Verde')) doc.setTextColor(16, 185, 129);
         else doc.setTextColor(71, 85, 105);
-        doc.text(p.triage.slice(0, 14), margin + 152, y + 4.2);
+        doc.text(p.triage.slice(0, 12), margin + 158, y + 4.2);
 
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
-        doc.text(p.destinoHospital || 'En sitio', margin + 172, y + 4.2, { maxWidth: 16 });
+        doc.text(p.destinoHospital || 'En sitio', margin + 176, y + 4.2, { maxWidth: 16 });
 
         y += 6;
       });
@@ -1426,12 +1550,12 @@ export async function generateAndSharePAIPdf(incident: IncidentData): Promise<Sh
 
     const signW = contentWidth / 3;
 
-    // Firmante 1: Comandante del Incidente
+    // Firmante 1: Comandante del Incidente (determinado por el Organigrama vigente)
     doc.line(margin + 6, y + 15, margin + signW - 6, y + 15);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(6.5);
     doc.setTextColor(brandOrange[0], brandOrange[1], brandOrange[2]);
-    doc.text(incident.comandanteIncidente || 'Comandante del Incidente', margin + signW / 2, y + 18.5, { align: 'center', maxWidth: signW - 8 });
+    doc.text(activeComandante, margin + signW / 2, y + 18.5, { align: 'center', maxWidth: signW - 8 });
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(5.2);
     doc.setTextColor(100, 116, 139);
@@ -1449,17 +1573,22 @@ export async function generateAndSharePAIPdf(incident: IncidentData): Promise<Sh
     doc.setTextColor(100, 116, 139);
     doc.text('JEFE SECCIÓN PLANIFICACIÓN (JSP)', s2X + signW / 2, y + 22, { align: 'center' });
 
-    // Firmante 3: Coordinación de Socorros Cruz Roja Mexicana
+    // Firmante 3: Coordinación de Socorros Cruz Roja Mexicana Delegación Tepatitlan (sin logo según instrucción)
     const s3X = margin + signW * 2;
     doc.line(s3X + 6, y + 15, s3X + signW - 6, y + 15);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(6.5);
     doc.setTextColor(brandNavy[0], brandNavy[1], brandNavy[2]);
-    doc.text(incident.institucionComando || 'Cruz Roja Mexicana', s3X + signW / 2, y + 18.5, { align: 'center', maxWidth: signW - 8 });
+    doc.text(
+      incident.institucionComando || 'Cruz Roja Mexicana Delegación Tepatitlan',
+      s3X + signW / 2,
+      y + 18.5,
+      { align: 'center', maxWidth: signW - 8 }
+    );
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(5.2);
     doc.setTextColor(100, 116, 139);
-    doc.text('COORDINACIÓN ESTATAL DE SOCORROS', s3X + signW / 2, y + 22, { align: 'center' });
+    doc.text('CRUZ ROJA MEXICANA · DELEGACIÓN TEPATITLAN', s3X + signW / 2, y + 22, { align: 'center' });
 
     y += signBoxH + 4;
 
@@ -1475,7 +1604,7 @@ export async function generateAndSharePAIPdf(incident: IncidentData): Promise<Sh
     // Generación del archivo PDF final
     const pdfBlob = doc.output('blob');
     const safeName = (incident.nombre || 'Incidente').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 30);
-    const fileName = `${incident.folio || 'PAI'}_ExpedienteIntegral_CruzRoja_${safeName}.pdf`;
+    const fileName = `${incident.folio || 'PAI'}_ExpedienteIntegral_CRM_Tepatitlan_${safeName}.pdf`;
 
     // Intentar compartir con Web Share API nativa si está soportada
     const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });

@@ -29,6 +29,7 @@ import {
   Moon
 } from 'lucide-react';
 import { IncidentData } from '../types/sci';
+import { CruzRojaMexicanaEmblem } from './CruzRojaMexicanaEmblem';
 
 interface IpadContainerProps {
   children: React.ReactNode;
@@ -43,6 +44,7 @@ interface IpadContainerProps {
   onQuickSave?: () => void;
   onSaveAndContinueEditing?: () => void;
   onOpenScenarioModal?: () => void;
+  onOpenPeriodoManager?: () => void;
   saveStatusText?: string;
   // Multi-user & Cross-platform & Offline props
   isOnline?: boolean;
@@ -71,6 +73,7 @@ export const IpadContainer: React.FC<IpadContainerProps> = ({
   onQuickSave,
   onSaveAndContinueEditing,
   onOpenScenarioModal,
+  onOpenPeriodoManager,
   saveStatusText,
   isOnline = true,
   activeCaseId = 'CASO-01',
@@ -107,6 +110,7 @@ export const IpadContainer: React.FC<IpadContainerProps> = ({
       {/* Top Device Bar (Floating Control Bar) */}
       <div className="w-full max-w-7xl px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 no-print">
         <div className="flex items-center gap-2.5">
+          <CruzRojaMexicanaEmblem size="sm" className="hidden sm:inline-block shadow-md ring-1 ring-orange-500/40" />
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-amber-500 animate-pulse' : 'bg-amber-600'}`} />
             <span className="text-xs sm:text-sm font-black text-white tracking-wide uppercase flex items-center gap-1.5">
@@ -115,8 +119,8 @@ export const IpadContainer: React.FC<IpadContainerProps> = ({
             </span>
           </div>
           <span className="hidden lg:inline text-slate-600">|</span>
-          <span className="hidden lg:inline text-slate-400 text-[11px] font-mono">
-            PROY-NOM-010-SEGOB-2016
+          <span className="hidden lg:inline text-amber-400 font-bold text-[11px]">
+            Cruz Roja Mexicana · Delegación Tepatitlán
           </span>
         </div>
 
@@ -347,9 +351,10 @@ export const IpadContainer: React.FC<IpadContainerProps> = ({
           </div>
 
           {/* Incident Top Quick Selector Bar */}
-          <div className="bg-slate-900/90 border-b border-slate-800 px-3 sm:px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
+          <div className="bg-slate-900/90 border-b border-slate-800 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
             {/* Active Incident Dropdown & Manager Shortcut */}
-            <div className="flex items-center flex-wrap gap-2">
+            <div className="flex items-center flex-wrap gap-2.5">
+              <CruzRojaMexicanaEmblem size="md" className="h-9 w-auto shadow-md ring-1 ring-orange-500/40 shrink-0" />
               <div className="relative">
                 <button
                   type="button"
@@ -473,10 +478,15 @@ export const IpadContainer: React.FC<IpadContainerProps> = ({
 
             {/* Status Pills */}
             <div className="flex items-center gap-2 text-xs">
-              <div className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-slate-300 font-mono text-[11px] hidden sm:flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={onOpenPeriodoManager}
+                className="bg-slate-950 hover:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-800 hover:border-amber-500/60 text-slate-300 font-mono text-[11px] hidden sm:flex items-center gap-1.5 cursor-pointer transition active:scale-95 shadow-sm"
+                title="Ver, modificar o eliminar períodos operacionales del incidente (SCI-202)"
+              >
                 <Clock className="w-3.5 h-3.5 text-amber-400" />
-                <span>P. Operacional: <strong>{incident.periodoOperacional.numero}</strong></span>
-              </div>
+                <span>P. Operacional: <strong className="text-amber-400">Nº {incident.periodoOperacional.numero}</strong></span>
+              </button>
 
               <div className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 text-slate-300 font-mono text-[11px] hidden md:flex items-center gap-1.5">
                 <span>Complejidad:</span>

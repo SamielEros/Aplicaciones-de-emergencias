@@ -50,10 +50,41 @@ export interface TacticalPin {
   id: string;
   tipo: 'PC' | 'E' | 'ACV' | 'B' | 'C' | 'H' | 'H1' | 'M' | 'PELIGRO' | 'BOMBEROS' | 'POLICIA';
   label: string;
-  x: number; // 0-100%
-  y: number; // 0-100%
+  x: number; // 0-100% relativo para croquis / fallback
+  y: number; // 0-100% relativo para croquis / fallback
+  lat?: number; // Coordenada geográfica exacta (latitud)
+  lng?: number; // Coordenada geográfica exacta (longitud)
+  ubicacionSitio?: string; // Nombre del sitio / referencia física (ej. Helipuerto Municipal, Base Norte)
   color: string;
   coordenadas?: string;
+}
+
+export interface TacticalZone {
+  id: string;
+  nombre: string;
+  tipo: 'perimetro' | 'caliente' | 'tibia' | 'fria' | 'busqueda_tracker' | 'evacuacion' | 'personalizado';
+  x: number; // 0-100% (centro)
+  y: number; // 0-100% (centro)
+  lat?: number; // Coordenada geográfica exacta del centro
+  lng?: number; // Coordenada geográfica exacta del centro
+  radio: number; // radio porcentual en el croquis (ej. 5% a 45%)
+  radioMetros?: number; // radio real en metros geográficos (ej. 50m, 100m, 250m, 500m, 1000m)
+  color: string;
+  opacidad: number;
+  estiloBorde: 'solido' | 'punteado' | 'radar_pulse';
+  descripcion?: string;
+  coordenadasCentro?: string;
+}
+
+export interface TacticalRoute {
+  id: string;
+  nombre: string;
+  tipo: 'evacuacion' | 'acceso_ambulancias' | 'linea_combate' | 'perimetro' | 'reabastecimiento' | 'libre';
+  color: string;
+  grosor: number;
+  puntos: Array<{ lat: number; lng: number }>;
+  distanciaAprox?: string;
+  descripcion?: string;
 }
 
 export interface SCI201Data {
@@ -62,6 +93,8 @@ export interface SCI201Data {
   coordenadasLng?: number | string;
   coordenadasTexto?: string;
   croquisPines: TacticalPin[];
+  croquisZonas?: TacticalZone[];
+  croquisRutas?: TacticalRoute[];
   croquisDrawing?: string;
   croquisNotas: string;
   objetivosIniciales: string[];
@@ -245,7 +278,9 @@ export interface PacienteAtendidoCRM {
   unidadAtendio: string;
   triage: 'Rojo (Inmediato)' | 'Amarillo (Diferido)' | 'Verde (Leve)' | 'Negro (Fallecido)';
   destinoHospital?: string;
-  horaAtencion?: string;
+  fechaRegistro?: string; // Fecha de captura/atención (YYYY-MM-DD)
+  fechaAtencion?: string; // Alias de compatibilidad
+  horaAtencion?: string; // Hora de atención (HH:mm)
 }
 
 export interface SCI207Data {

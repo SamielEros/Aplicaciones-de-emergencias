@@ -69,6 +69,7 @@ export const SCI207Form: React.FC<SCI207FormProps> = ({ data, onChange }) => {
 
   const addPaciente = () => {
     const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const newPaciente: PacienteAtendidoCRM = {
       id: `pac-${Date.now()}`,
@@ -79,6 +80,7 @@ export const SCI207Form: React.FC<SCI207FormProps> = ({ data, onChange }) => {
       unidadAtendio: 'Ambulancia CRM-01',
       triage: 'Verde (Leve)',
       destinoHospital: 'Atención en escena',
+      fechaRegistro: dateStr,
       horaAtencion: timeStr
     };
     updateField('pacientesAtendidos', [...pacientes, newPaciente]);
@@ -119,16 +121,17 @@ export const SCI207Form: React.FC<SCI207FormProps> = ({ data, onChange }) => {
       alert('No hay pacientes en el listado para exportar.');
       return;
     }
-    const headers = ['Nombre Completo', 'Edad', 'Motivo Atencion', 'Codigo Postal', 'Unidad Que Atendio', 'Triage', 'Destino / Hospital', 'Hora Atencion'];
+    const headers = ['Fecha Registro', 'Hora', 'Nombre Completo', 'Edad', 'Motivo Atencion', 'Codigo Postal', 'Unidad Que Atendio', 'Triage', 'Destino / Hospital'];
     const rows = pacientes.map((p) => [
+      p.fechaRegistro || p.fechaAtencion || '',
+      p.horaAtencion || '',
       `"${p.nombre.replace(/"/g, '""')}"`,
       p.edad,
       `"${p.motivoAtencion.replace(/"/g, '""')}"`,
       p.codigoPostal,
       `"${p.unidadAtendio.replace(/"/g, '""')}"`,
       p.triage,
-      `"${(p.destinoHospital || '').replace(/"/g, '""')}"`,
-      p.horaAtencion || ''
+      `"${(p.destinoHospital || '').replace(/"/g, '""')}"`
     ]);
     const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const a = document.createElement('a');
@@ -217,13 +220,14 @@ export const SCI207Form: React.FC<SCI207FormProps> = ({ data, onChange }) => {
           <table className="w-full text-left text-xs text-slate-300">
             <thead className="bg-slate-900 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
               <tr>
-                <th className="p-2.5 min-w-[170px]">Nombre Completo</th>
+                <th className="p-2.5 w-32">Fecha Reg.</th>
+                <th className="p-2.5 min-w-[160px]">Nombre Completo</th>
                 <th className="p-2.5 w-16 text-center">Edad</th>
-                <th className="p-2.5 min-w-[180px]">Motivo de Atención</th>
+                <th className="p-2.5 min-w-[170px]">Motivo de Atención</th>
                 <th className="p-2.5 w-24">C. Postal</th>
-                <th className="p-2.5 min-w-[140px]">Unidad que Atendió</th>
+                <th className="p-2.5 min-w-[130px]">Unidad que Atendió</th>
                 <th className="p-2.5 min-w-[130px]">Triage START</th>
-                <th className="p-2.5 min-w-[140px]">Destino / Hospital</th>
+                <th className="p-2.5 min-w-[130px]">Destino / Hospital</th>
                 <th className="p-2.5 w-20">Hora</th>
                 <th className="p-2.5 w-10 text-center"></th>
               </tr>
@@ -231,6 +235,16 @@ export const SCI207Form: React.FC<SCI207FormProps> = ({ data, onChange }) => {
             <tbody className="divide-y divide-slate-800/60">
               {pacientes.map((p) => (
                 <tr key={p.id} className="hover:bg-slate-900/60 transition-colors">
+                  {/* Fecha Registro */}
+                  <td className="p-2">
+                    <input
+                      type="date"
+                      value={p.fechaRegistro || p.fechaAtencion || ''}
+                      onChange={(e) => updatePaciente(p.id, 'fechaRegistro', e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-mono text-cyan-300 outline-none focus:border-red-400"
+                    />
+                  </td>
+
                   {/* Nombre */}
                   <td className="p-2">
                     <input

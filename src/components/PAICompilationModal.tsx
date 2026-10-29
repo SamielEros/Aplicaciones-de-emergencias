@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { IncidentData } from '../types/sci';
 import { generateAndSharePAIPdf } from '../services/pdfExportService';
+import { CruzRojaMexicanaEmblem } from './CruzRojaMexicanaEmblem';
 import {
   Share2,
   Download,
@@ -31,6 +32,13 @@ export const PAICompilationModal: React.FC<PAICompilationModalProps> = ({ incide
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [shareSuccessMsg, setShareSuccessMsg] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Comandante del Incidente establecido en el Organigrama actual (SCI-203 / SCI-201)
+  const activeComandante =
+    incident.sci203?.mando?.comandante?.trim() ||
+    incident.sci201?.organizacionInicial?.comandante?.trim() ||
+    incident.comandanteIncidente?.trim() ||
+    'Comandante del Incidente';
 
   const handleConvertAndSharePDF = async () => {
     setIsGeneratingPdf(true);
@@ -71,28 +79,31 @@ export const PAICompilationModal: React.FC<PAICompilationModalProps> = ({ incide
       <div className="bg-slate-900 border border-slate-700 rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Modal Top Bar */}
         <div className="no-print p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 font-mono text-xs font-bold border border-orange-500/30">
-                PAI Consolidado
-              </span>
-              <h2 className="text-base sm:text-lg font-bold text-white">
-                Plan de Acción del Incidente (PAI) - Período {incident.periodoOperacional.numero}
-              </h2>
+          <div className="flex items-center gap-3">
+            <CruzRojaMexicanaEmblem size="md" className="shrink-0" />
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-400 font-mono text-xs font-bold border border-orange-500/30">
+                  PAI Consolidado
+                </span>
+                <h2 className="text-base sm:text-lg font-bold text-white">
+                  Plan de Acción del Incidente (PAI) - Período {incident.periodoOperacional.numero}
+                </h2>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Expediente operacional unificado conforme a PROY-NOM-010-SEGOB-2016 · Cruz Roja Mexicana Delegación Tepatitlan.
+              </p>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Expediente operacional unificado conforme a PROY-NOM-010-SEGOB-2016 · Coordinación de Socorros Cruz Roja Mexicana.
-            </p>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* NUEVO BOTÓN: Convertir a PDF Completo e Integral */}
+            {/* Botón: Convertir a PDF Completo e Integral */}
             <button
               type="button"
               onClick={handleConvertAndSharePDF}
               disabled={isGeneratingPdf}
               className="flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-orange-500/20 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-              title="Descargar informe oficial en PDF completo, integral y sin información apilada"
+              title="Descargar informe oficial en PDF completo de Cruz Roja Mexicana Delegación Tepatitlan (sin información apilada)"
             >
               {isGeneratingPdf ? (
                 <>
@@ -187,7 +198,7 @@ export const PAICompilationModal: React.FC<PAICompilationModalProps> = ({ incide
               </div>
               <div>
                 <span className="text-slate-500 block text-[10px]">COMANDANTE (CI):</span>
-                <span className="font-bold text-white truncate">{incident.comandanteIncidente}</span>
+                <span className="font-bold text-white truncate">{activeComandante}</span>
               </div>
             </div>
           </div>
@@ -243,7 +254,7 @@ export const PAICompilationModal: React.FC<PAICompilationModalProps> = ({ incide
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
                 <span className="text-slate-500 block text-[10px]">COMANDANTE DEL INCIDENTE (CI):</span>
-                <span className="font-bold text-white">{incident.comandanteIncidente}</span>
+                <span className="font-bold text-white">{activeComandante}</span>
               </div>
               <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
                 <span className="text-slate-500 block text-[10px]">OFICIAL DE SEGURIDAD:</span>
@@ -608,7 +619,7 @@ export const PAICompilationModal: React.FC<PAICompilationModalProps> = ({ incide
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-800 text-center text-xs">
             <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
               <div className="h-10 border-b border-slate-700 mb-2" />
-              <div className="font-bold text-white">{incident.comandanteIncidente}</div>
+              <div className="font-bold text-white">{activeComandante}</div>
               <div className="text-[10px] text-slate-400">COMANDANTE DEL INCIDENTE (CI)</div>
             </div>
             <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
@@ -619,7 +630,7 @@ export const PAICompilationModal: React.FC<PAICompilationModalProps> = ({ incide
             <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
               <div className="h-10 border-b border-slate-700 mb-2" />
               <div className="font-bold text-orange-400 font-bold">Coordinación de Socorros</div>
-              <div className="text-[10px] text-slate-400">CRUZ ROJA MEXICANA</div>
+              <div className="text-[10px] text-slate-400">CRUZ ROJA MEXICANA · DELEGACIÓN TEPATITLAN</div>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
-import React from 'react';
-import { SCI209Data, CentroCostosData, ControlHorasHombreData } from '../../types/sci';
+import React, { useState, useEffect } from 'react';
+import { SCI209Data, CentroCostosData, ControlHorasHombreData, IncidentData } from '../../types/sci';
+import { consolidateSCI209Data, getCrossFormMetrics } from '../../utils/sci209Consolidator';
 import {
   FileBarChart2,
   Percent,
@@ -17,13 +18,21 @@ import {
   Sparkles,
   ArrowUpRight,
   ArrowDownRight,
-  ShieldAlert
+  ShieldAlert,
+  RefreshCw,
+  Layers,
+  HeartPulse,
+  Radio,
+  MapPin,
+  Calendar,
+  Zap
 } from 'lucide-react';
 
 interface SCI209FormProps {
   data: SCI209Data;
   onChange: (data: SCI209Data) => void;
   comandante: string;
+  incident?: IncidentData;
   centroCostos?: CentroCostosData;
   controlHorasHombre?: ControlHorasHombreData;
 }
@@ -32,9 +41,23 @@ export const SCI209Form: React.FC<SCI209FormProps> = ({
   data,
   onChange,
   comandante,
+  incident,
   centroCostos,
   controlHorasHombre
 }) => {
+  const [autoSync, setAutoSync] = useState(true);
+  const [syncToast, setSyncToast] = useState<string | null>(null);
+
+  const metrics = incident ? getCrossFormMetrics(incident) : null;
+
+  // Auto-sincronizar datos si está activo y cambian los datos de otros formularios
+  const handleAutoConsolidate = (forceManual = false) => {
+    if (!incident) return;
+    const consolidated = consolidateSCI209Data(incident, forceManual ? {} : data);
+    onChange(consolidated);
+    setSyncToast('¡SCI-209 consolidado y actualizado con todos los formatos!');
+    setTimeout(() => setSyncToast(null), 3500);
+  };
   const updateField = (field: keyof SCI209Data, value: any) => {
     onChange({
       ...data,
@@ -121,19 +144,99 @@ export const SCI209Form: React.FC<SCI209FormProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 bg-amber-500/20 text-amber-400 font-mono text-xs font-bold rounded-lg border border-amber-500/30">
-              SCI-209
-            </span>
-            <h2 className="text-lg font-bold text-white">Resumen del Estado del Incidente / Informe Final</h2>
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Informe ejecutivo de situación para autoridades superiores, Centro de Operaciones de Emergencia (COE) y prensa. Incluye anexos de Centro de Costos y Control de Horas-Hombre.
-          </p>
+      {/* Toast de Sincronización Automática */}
+      {syncToast && (
+        <div className="fixed top-20 right-6 z-50 bg-emerald-500 text-slate-950 font-bold px-4 py-2.5 rounded-xl shadow-xl border border-emerald-400 flex items-center gap-2 animate-bounce text-xs">
+          <CheckCircle2 className="w-4 h-4" />
+          <span>{syncToast}</span>
         </div>
+      )}
+
+      {/* Header y Control de Auto-Sincronización Inter-Formatos */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-1 bg-amber-500/20 text-amber-400 font-mono text-xs font-bold rounded-lg border border-amber-500/30">
+                SCI-209
+              </span>
+              <h2 className="text-lg font-bold text-white">Resumen del Estado del Incidente / Informe Final</h2>
+              <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded uppercase flex items-center gap-1 border border-emerald-500/30">
+                <Zap className="w-3 h-3 text-emerald-400 animate-pulse" />
+                Auto-Sincronizado
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Consolidación automática y certera de las condiciones del desastre a partir de todos los formatos del SCI (NOM-010-SEGOB).
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleAutoConsolidate(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 cursor-pointer active:scale-95 transition"
+              title="Consolidar y actualizar inmediatamente todos los datos generados en los demás formatos"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Sincronizar Todos los Formatos SCI</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Panel Resumen de Datos Generados en Otros Formatos */}
+        {metrics && (
+          <div className="bg-slate-950 border border-slate-800/80 rounded-2xl p-3.5">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+              <Layers className="w-3 h-3 text-cyan-400" />
+              <span>Datos en Tiempo Real Generados en los Demás Formatos SCI:</span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+              <div className="bg-slate-900/80 p-2 rounded-xl border border-slate-800">
+                <span className="text-[9px] text-slate-400 uppercase font-semibold block">Efectivos (SCI-211)</span>
+                <span className="text-sm font-black font-mono text-emerald-400">
+                  {metrics.totalEfectivos} en campo
+                </span>
+              </div>
+
+              <div className="bg-slate-900/80 p-2 rounded-xl border border-slate-800">
+                <span className="text-[9px] text-slate-400 uppercase font-semibold block">Vehículos / Unidades</span>
+                <span className="text-sm font-black font-mono text-blue-400">
+                  {metrics.totalVehiculos} registrados
+                </span>
+              </div>
+
+              <div className="bg-slate-900/80 p-2 rounded-xl border border-slate-800">
+                <span className="text-[9px] text-slate-400 uppercase font-semibold block">Víctimas / Triaje (207)</span>
+                <span className="text-sm font-black font-mono text-amber-400">
+                  {metrics.triaje.rojoInmediato + metrics.triaje.amarilloDiferido + metrics.triaje.verdeLeve} lesionados
+                </span>
+              </div>
+
+              <div className="bg-slate-900/80 p-2 rounded-xl border border-slate-800">
+                <span className="text-[9px] text-slate-400 uppercase font-semibold block">Fallecidos (207)</span>
+                <span className="text-sm font-black font-mono text-rose-400">
+                  {metrics.triaje.negroFallecido} víctimas
+                </span>
+              </div>
+
+              <div className="bg-slate-900/80 p-2 rounded-xl border border-slate-800">
+                <span className="text-[9px] text-slate-400 uppercase font-semibold block">Instalaciones (201)</span>
+                <span className="text-sm font-black font-mono text-orange-400">
+                  {metrics.instalacionesCount} en mapa
+                </span>
+              </div>
+
+              <div className="bg-slate-900/80 p-2 rounded-xl border border-slate-800">
+                <span className="text-[9px] text-slate-400 uppercase font-semibold block">Período Activo (202)</span>
+                <span className="text-sm font-black font-mono text-cyan-400">
+                  Período Nº {metrics.periodoActivo}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Progress & Percentage of Containment */}

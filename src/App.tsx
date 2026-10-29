@@ -44,6 +44,7 @@ import { SCI214Form } from './components/forms/SCI214Form';
 import { SCI221Form } from './components/forms/SCI221Form';
 import { CostCenterForm } from './components/forms/CostCenterForm';
 import { ManHoursForm } from './components/forms/ManHoursForm';
+import { consolidateSCI209Data } from './utils/sci209Consolidator';
 
 import {
   Menu,
@@ -253,6 +254,34 @@ export default function App() {
     }
   }, [caseId]);
 
+  // Garantizar que las rutas e instalaciones en el mapa permanezcan fijas y guardadas al apagar la app o cerrar pestaña
+  useEffect(() => {
+    const handleSaveOnExit = () => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(incident));
+        localStorage.setItem(REGISTERED_SCENARIOS_KEY, JSON.stringify(registeredScenarios));
+        localStorage.setItem(CASE_STORAGE_KEY, caseId);
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    window.addEventListener('beforeunload', handleSaveOnExit);
+    window.addEventListener('pagehide', handleSaveOnExit);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        handleSaveOnExit();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleSaveOnExit);
+      window.removeEventListener('pagehide', handleSaveOnExit);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [incident, registeredScenarios, caseId]);
+
   // Subscribe to real-time incident updates from Firestore (with automatic offline cache)
   useEffect(() => {
     console.log(`Subscribing to incident case: ${caseId}`);
@@ -267,20 +296,19 @@ export default function App() {
           return;
         }
 
-        // 2. Check if change originated from this client (self-update echo)
-        const remoteMeta = (remoteIncident as any)._syncMeta;
-        if (remoteMeta && remoteMeta.updatedBy === collaborator.userName) {
-          return;
-        }
-
-        // 3. Prevent cursor jumping and character loss:
-        // If local user recently edited (< 2500ms) or an input is actively focused,
-        // DO NOT clobber the user's active typing buffer!
+        // 2. Prevent cursor jumping and character loss while user is actively typing:
         const isRecentlyEditedLocally = Date.now() - lastLocalEditTimeRef.current < 2500;
         const isInputFocused =
           typeof document !== 'undefined' &&
           document.activeElement &&
           (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA');
+
+        const remoteMeta = (remoteIncident as any)._syncMeta;
+
+        // Only ignore self-echo if the user on THIS client actively edited in the last 2.5s
+        if (isRecentlyEditedLocally && remoteMeta && remoteMeta.updatedBy === collaborator.userName) {
+          return;
+        }
 
         if (isRecentlyEditedLocally || isInputFocused) {
           return;
@@ -295,6 +323,11 @@ export default function App() {
         // Apply incoming incident state safely
         isIncomingUpdateRef.current = true;
         setIncident(remoteIncident);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteIncident));
+        } catch (e) {
+          // ignore
+        }
         setTimeout(() => {
           isIncomingUpdateRef.current = false;
         }, 100);
@@ -390,11 +423,58 @@ export default function App() {
   const updateIncidentField = <K extends keyof IncidentData>(field: K, val: IncidentData[K]) => {
     lastLocalEditTimeRef.current = Date.now();
     setIncident((prev) => {
-      const updated: IncidentData = {
+      let updated: IncidentData = {
         ...prev,
         [field]: val,
         ultimaModificacion: new Date().toISOString().replace('T', ' ').slice(0, 16)
       };
+
+      // Sincronizar automáticamente el Comandante del Incidente con el Organigrama vigente (SCI-203 / SCI-201)
+      if (field === 'sci203') {
+        const sci203Data = val as any;
+        if (sci203Data?.mando?.comandante?.trim()) {
+          updated.comandanteIncidente = sci203Data.mando.comandante.trim();
+        }
+      } else if (field === 'comandanteIncidente') {
+        const cmdName = (val as string)?.trim() || '';
+        if (cmdName && updated.sci203?.mando) {
+          updated.sci203 = {
+            ...updated.sci203,
+            mando: {
+              ...updated.sci203.mando,
+              comandante: cmdName
+            }
+          };
+        }
+      }
+
+      // Auto-actualizar en automático SCI-209 con los datos generados en todos los demás formatos
+      if (field !== 'sci209') {
+        try {
+          const consolidated209 = consolidateSCI209Data(updated, updated.sci209);
+          updated = {
+            ...updated,
+            sci209: consolidated209
+          };
+        } catch (e) {
+          console.warn('Error consolidando SCI-209 automáticamente:', e);
+        }
+      }
+
+      // Sincronizar automáticamente en la lista de escenarios registrados
+      const nextScenarios = registeredScenarios.map((sc) => (sc.id === updated.id ? updated : sc));
+      setRegisteredScenarios(nextScenarios);
+
+      // Guardar de inmediato y síncrono si es cambio en mapa táctico o SCI-201 para fijar posiciones
+      if (field === 'sci201') {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+          localStorage.setItem(REGISTERED_SCENARIOS_KEY, JSON.stringify(nextScenarios));
+        } catch (e) {
+          // ignore
+        }
+      }
+
       triggerSync(updated);
       return updated;
     });
@@ -658,6 +738,7 @@ export default function App() {
             data={incident.sci209}
             onChange={(d) => updateIncidentField('sci209', d)}
             comandante={incident.comandanteIncidente}
+            incident={incident}
             centroCostos={incident.centroCostos}
             controlHorasHombre={incident.controlHorasHombre}
           />
@@ -744,6 +825,7 @@ export default function App() {
       onQuickSave={handleManualSave}
       onSaveAndContinueEditing={() => handleSaveAndContinueEditing(incident)}
       onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
+      onOpenPeriodoManager={() => setCurrentForm('SCI-202')}
       saveStatusText={lastSavedTime}
       isOnline={isOnline}
       activeCaseId={caseId}

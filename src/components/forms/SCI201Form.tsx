@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { SCI201Data, TacticalPin } from '../../types/sci';
-import { TacticalSketchPad } from '../TacticalSketchPad';
+import { SCI201Data, TacticalPin, TacticalZone, TacticalRoute } from '../../types/sci';
+import { DynamicTacticalMap } from '../DynamicTacticalMap';
+import { TacticalInstallationsPanel } from '../TacticalInstallationsPanel';
+import { SCI_SYMBOLS, ZONE_PRESETS } from '../TacticalSketchPad';
 import {
   Plus,
   Trash2,
@@ -15,7 +17,12 @@ import {
   Compass,
   CheckCircle2,
   Radio,
-  Satellite
+  Satellite,
+  Flag,
+  Crosshair,
+  Minimize2,
+  Maximize2,
+  Route
 } from 'lucide-react';
 
 interface SCI201FormProps {
@@ -26,6 +33,7 @@ interface SCI201FormProps {
 }
 
 const PRESET_MEXICO_COORDS = [
+  { name: 'Jalisco - Tepatitlán de Morelos (Cruz Roja Mexicana)', lat: 20.8167, lng: -102.7667 },
   { name: 'CDMX - Cuauhtémoc (Roma Nte / Insurgentes)', lat: 19.4195, lng: -99.1628 },
   { name: 'CDMX - Zócalo / Centro Histórico', lat: 19.4326, lng: -99.1332 },
   { name: 'CDMX - Tlalpan / Zona Sur', lat: 19.2891, lng: -99.1685 },
@@ -42,8 +50,18 @@ const PRESET_MEXICO_COORDS = [
 export const SCI201Form: React.FC<SCI201FormProps> = ({ data, onChange, incidentName, lugar }) => {
   const [isLocating, setIsLocating] = useState(false);
 
-  const currentLat = typeof data.coordenadasLat === 'number' ? data.coordenadasLat : parseFloat(String(data.coordenadasLat || '19.4195')) || 19.4195;
-  const currentLng = typeof data.coordenadasLng === 'number' ? data.coordenadasLng : parseFloat(String(data.coordenadasLng || '-99.1628')) || -99.1628;
+  // Estados del Mapa Dinámico y Multi-Sitio
+  const [activeMapMode, setActiveMapMode] = useState<'symbols' | 'zones' | 'draw'>('symbols');
+  const [activePinType, setActivePinType] = useState<typeof SCI_SYMBOLS[number]['tipo']>('PC');
+  const [activeZonePreset, setActiveZonePreset] = useState<typeof ZONE_PRESETS[number]>(ZONE_PRESETS[0]);
+  const [selectedPinId, setSelectedPinId] = useState<string | null>(null);
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+  const [mapLayer, setMapLayer] = useState<'satellite' | 'streets' | 'dark'>('satellite');
+  const [iconSize, setIconSize] = useState<'pequeno' | 'normal'>('pequeno');
+  const [flyToCoords, setFlyToCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  const currentLat = typeof data.coordenadasLat === 'number' ? data.coordenadasLat : parseFloat(String(data.coordenadasLat || '20.8167')) || 20.8167;
+  const currentLng = typeof data.coordenadasLng === 'number' ? data.coordenadasLng : parseFloat(String(data.coordenadasLng || '-102.7667')) || -102.7667;
 
   const updateField = (field: keyof SCI201Data, value: any) => {
     onChange({
@@ -313,48 +331,252 @@ export const SCI201Form: React.FC<SCI201FormProps> = ({ data, onChange, incident
         />
       </div>
 
-      {/* 2. Croquis Táctico e Instalaciones SCI (Conectado Automáticamente con Georreferenciación y Satélite) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+      {/* 2. Croquis Táctico Dinámico e Instalaciones SCI (Conectado con Satélite en Tiempo Real) */}
+      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-orange-400" />
+            <MapPin className="w-5 h-5 text-orange-400" />
             <div>
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                <span>2. Croquis Táctico e Instalaciones del SCI</span>
-                <span className="text-[10px] font-mono text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                  Satélite Georreferenciado
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <span>2. Croquis Táctico Dinámico e Instalaciones del SCI</span>
+                <span className="text-[10px] font-mono text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  Interactivo 100% · Satélite y Calles
                 </span>
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Sitúe el Puesto de Comando (PC), Área de Espera (E), Área de Concentración de Víctimas (ACV), Helipuntos y perímetros de riesgo.
+                Desplace y acerque el mapa con libertad. Sitúe instalaciones en la zona cero o en otros sitios estratégicos de la región.
               </p>
             </div>
           </div>
-          <span className="text-xs text-slate-400 font-mono hidden sm:inline bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+          <span className="text-xs text-slate-300 font-mono hidden sm:inline bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800">
             {currentLat.toFixed(4)}° N, {currentLng.toFixed(4)}° O
           </span>
         </div>
 
-        {/* PIZARRA TÁCTICA CONECTADA CON COORDENADAS Y MAPA SATELITAL */}
-        <TacticalSketchPad
+        {/* Barra de Herramientas del Mapa Dinámico */}
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-3 flex flex-col gap-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMapMode('symbols');
+                  setSelectedZoneId(null);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  activeMapMode === 'symbols'
+                    ? 'bg-orange-500 text-slate-950 font-black shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Flag className="w-3.5 h-3.5" />
+                <span>Simbología SCI ({data.croquisPines.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMapMode('zones');
+                  setSelectedPinId(null);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  activeMapMode === 'zones'
+                    ? 'bg-blue-600 text-white font-black shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Radio className="w-3.5 h-3.5 text-blue-300 animate-pulse" />
+                <span>Zonas Tracker ({data.croquisZonas?.length || 0})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMapMode('draw');
+                  setSelectedPinId(null);
+                  setSelectedZoneId(null);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  activeMapMode === 'draw'
+                    ? 'bg-emerald-600 text-white font-black shadow-md'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Route className="w-3.5 h-3.5 text-emerald-300" />
+                <span>Trazar Rutas ({data.croquisRutas?.length || 0})</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-xl border border-slate-800 text-[11px]">
+                <span className="text-slate-400 font-semibold hidden sm:inline">Iconos:</span>
+                <button
+                  type="button"
+                  onClick={() => setIconSize('pequeno')}
+                  className={`px-2 py-0.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 ${
+                    iconSize === 'pequeno' ? 'bg-amber-500 text-slate-950 font-black' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Minimize2 className="w-3 h-3" />
+                  <span>Pequeños</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIconSize('normal')}
+                  className={`px-2 py-0.5 rounded-lg font-bold transition cursor-pointer flex items-center gap-1 ${
+                    iconSize === 'normal' ? 'bg-slate-700 text-white font-bold' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Maximize2 className="w-3 h-3" />
+                  <span>Normal</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setMapLayer('satellite')}
+                  className={`px-2 py-0.5 rounded-lg font-bold transition cursor-pointer ${
+                    mapLayer === 'satellite' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Satélite
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMapLayer('streets')}
+                  className={`px-2 py-0.5 rounded-lg font-bold transition cursor-pointer ${
+                    mapLayer === 'streets' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Calles
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMapLayer('dark')}
+                  className={`px-2 py-0.5 rounded-lg font-bold transition cursor-pointer ${
+                    mapLayer === 'dark' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Oscuro
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Selector de Símbolos SCI Activo */}
+          {activeMapMode === 'symbols' && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+              <span className="text-[11px] font-bold text-orange-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+                Fijar al hacer Clic:
+              </span>
+              {SCI_SYMBOLS.map((s: any) => (
+                <button
+                  key={s.tipo}
+                  type="button"
+                  onClick={() => setActivePinType(s.tipo)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-medium transition shrink-0 cursor-pointer ${
+                    activePinType === s.tipo
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-slate-950 font-black shadow-md'
+                      : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                  }`}
+                  title={s.desc}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                  <span className="font-mono font-bold">{s.tipo}</span>
+                  <span className="text-[10px] opacity-80 hidden md:inline">{s.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Selector de Plantillas de Zonas Tracker */}
+          {activeMapMode === 'zones' && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+              <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
+                Radio al hacer Clic:
+              </span>
+              {ZONE_PRESETS.map((zp: any) => (
+                <button
+                  key={zp.tipo}
+                  type="button"
+                  onClick={() => setActiveZonePreset(zp)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium transition shrink-0 cursor-pointer ${
+                    activeZonePreset.tipo === zp.tipo
+                      ? 'bg-blue-600 text-white font-bold shadow-md'
+                      : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                  }`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: zp.color }} />
+                  <span>{zp.nombre}</span>
+                  <span className="text-[10px] font-mono text-cyan-300 bg-slate-950 px-1 rounded">
+                    {zp.radioMetros}m
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* MAPA DINÁMICO LEAFLET (Desplazamiento, Zoom y Arrastre Libre) */}
+        <DynamicTacticalMap
           pines={data.croquisPines}
           onUpdatePines={(pines) => updateField('croquisPines', pines)}
-          notas={data.croquisNotas}
-          onUpdateNotas={(notas) => updateField('croquisNotas', notas)}
-          drawingData={data.croquisDrawing}
-          onUpdateDrawing={(draw) => updateField('croquisDrawing', draw)}
-          coordenadasLat={currentLat}
-          coordenadasLng={currentLng}
-          coordenadasTexto={data.coordenadasTexto}
-          onUpdateCoordinates={(lat, lng) => {
-            onChange({
-              ...data,
-              coordenadasLat: lat,
-              coordenadasLng: lng,
-              coordenadasTexto: `${lat}° N, ${lng}° O`
-            });
+          zonas={data.croquisZonas || []}
+          onUpdateZonas={(zonas) => updateField('croquisZonas', zonas)}
+          rutas={data.croquisRutas || []}
+          onUpdateRutas={(rutas) => updateField('croquisRutas', rutas)}
+          centerLat={currentLat}
+          centerLng={currentLng}
+          iconSize={iconSize}
+          activeMode={activeMapMode}
+          onChangeMode={(mode) => setActiveMapMode(mode)}
+          activePinType={activePinType}
+          activeZonePreset={activeZonePreset}
+          selectedPinId={selectedPinId}
+          onSelectPinId={setSelectedPinId}
+          selectedZoneId={selectedZoneId}
+          onSelectZoneId={setSelectedZoneId}
+          mapLayer={mapLayer}
+          flyToCoords={flyToCoords}
+        />
+
+        {/* PANEL DE INSTALACIONES Y DESPLIEGUE EN OTROS SITIOS */}
+        <TacticalInstallationsPanel
+          pines={data.croquisPines}
+          centerLat={currentLat}
+          centerLng={currentLng}
+          selectedPinId={selectedPinId}
+          onSelectPin={(pin) => {
+            setSelectedPinId(pin.id);
+            setFlyToCoords({ lat: pin.lat ?? currentLat, lng: pin.lng ?? currentLng });
+          }}
+          onRemovePin={(id) => {
+            updateField(
+              'croquisPines',
+              data.croquisPines.filter((p) => p.id !== id)
+            );
+            if (selectedPinId === id) setSelectedPinId(null);
+          }}
+          onAddCustomPin={(newPin) => {
+            updateField('croquisPines', [...data.croquisPines, newPin]);
+            setSelectedPinId(newPin.id);
+            setFlyToCoords({ lat: newPin.lat ?? currentLat, lng: newPin.lng ?? currentLng });
           }}
         />
+
+        {/* Notas y Observaciones Tácticas del Croquis */}
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+          <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">
+            Notas Tácticas del Croquis / Accesos e Instalaciones:
+          </label>
+          <textarea
+            rows={2}
+            value={data.croquisNotas}
+            onChange={(e) => updateField('croquisNotas', e.target.value)}
+            placeholder="Observaciones de accesos viales, rutas de evacuación rápida, puntos de helipuerto o condiciones de la zona cero..."
+            className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 outline-none focus:border-amber-400"
+          />
+        </div>
       </div>
 
       {/* 3. Objetivos Iniciales */}

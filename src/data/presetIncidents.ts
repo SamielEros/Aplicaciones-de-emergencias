@@ -27,12 +27,12 @@ export const PRESET_INCIDENTS: IncidentData[] = [
       evaluacionInicial:
         'Colapso parcial tipo sándwich en edificio habitacional de 5 niveles. Posibles 14 personas atrapadas bajo escombros. Fuga de gas LP controlada por Bomberos. Red eléctrica suspendida en 3 manzanas a la redonda. Se establece perímetro de exclusión de 150 metros.',
       croquisPines: [
-        { id: 'p1', tipo: 'PC', label: 'Puesto de Comando (Parque Río de Janeiro)', x: 18, y: 30, color: '#f97316', coordenadas: '19.4192, -99.1620' },
-        { id: 'p2', tipo: 'E', label: 'Área de Espera (Av. Álvaro Obregón)', x: 75, y: 22, color: '#eab308', coordenadas: '19.4180, -99.1610' },
-        { id: 'p3', tipo: 'ACV', label: 'Área Concentración Víctimas / Triage', x: 28, y: 68, color: '#ef4444', coordenadas: '19.4188, -99.1631' },
-        { id: 'p4', tipo: 'H1', label: 'Helipunto (Campo Deportivo)', x: 82, y: 78, color: '#3b82f6', coordenadas: '19.4150, -99.1600' },
-        { id: 'p5', tipo: 'PELIGRO', label: 'Edificio Colapsado - Zona Caliente', x: 50, y: 48, color: '#dc2626', coordenadas: '19.4195, -99.1628' },
-        { id: 'p6', tipo: 'BOMBEROS', label: 'Corte de Líneas / Bomberos CDMX', x: 42, y: 38, color: '#ea580c' },
+        { id: 'p1', tipo: 'PC', label: 'Puesto de Comando (Parque Río de Janeiro)', x: 18, y: 30, lat: 19.4192, lng: -99.1620, color: '#f97316', coordenadas: '19.4192° N, -99.1620° O' },
+        { id: 'p2', tipo: 'E', label: 'Área de Espera (Av. Álvaro Obregón)', x: 75, y: 22, lat: 19.4180, lng: -99.1610, color: '#eab308', coordenadas: '19.4180° N, -99.1610° O' },
+        { id: 'p3', tipo: 'ACV', label: 'Área Concentración Víctimas / Triage', x: 28, y: 68, lat: 19.4188, lng: -99.1631, color: '#ef4444', coordenadas: '19.4188° N, -99.1631° O' },
+        { id: 'p4', tipo: 'H1', label: 'Helipunto (Campo Deportivo)', x: 82, y: 78, lat: 19.4150, lng: -99.1600, color: '#3b82f6', coordenadas: '19.4150° N, -99.1600° O' },
+        { id: 'p5', tipo: 'PELIGRO', label: 'Edificio Colapsado - Zona Caliente', x: 50, y: 48, lat: 19.4195, lng: -99.1628, color: '#dc2626', coordenadas: '19.4195° N, -99.1628° O' },
+        { id: 'p6', tipo: 'BOMBEROS', label: 'Corte de Líneas / Bomberos CDMX', x: 42, y: 38, lat: 19.4201, lng: -99.1615, color: '#ea580c', coordenadas: '19.4201° N, -99.1615° O' }
       ],
       croquisNotas: 'Vientos calmos del NE. Rutas de evacuación despejadas por Av. Insurgentes y Av. Cuauhtémoc.',
       objetivosIniciales: [
@@ -315,7 +315,7 @@ export const PRESET_INCIDENTS: IncidentData[] = [
       unidadNombre: 'Puesto de Comando Central (PC)',
       responsableBitacora: 'Lic. Brenda Ortiz (Documentación)',
       entradas: [
-        { id: 'bt1', hora: '07:15', actividadEvento: 'Notificación C5 por sismo con colapso registrado en cámara urbana C5.', observaciones: 'Activación de protocolo Plan Popocatépetl / Terremoto' },
+        { id: 'bt1', hora: '07:15', actividadEvento: 'Notificación C5 por sismo con colapso registrado en cámara urbana C5.', observaciones: 'Activación de protocolo Plan Operativo Emergencias' },
         { id: 'bt2', hora: '07:35', actividadEvento: 'Se declara formalmente Puesto de Comando (PC) en Glorieta Río de Janeiro.', observaciones: 'Comandante: Alejandro Morales' },
         { id: 'bt3', hora: '08:00', actividadEvento: 'Primera reunión táctica de staff. Se definen objetivos del SCI-202.', observaciones: 'Presentes: SEDENA, Bomberos, SSC, CRUM' },
         { id: 'bt4', hora: '08:30', actividadEvento: 'Marcaje positivo de canino Athos-2 en cuadrante Alpha.', observaciones: 'Se suspende ruido en toda la manzana para escucha acústica' },
@@ -391,11 +391,11 @@ export const PRESET_INCIDENTS: IncidentData[] = [
       evaluacionInicial:
         'Incendio de copa y sotobosque afectando 850 hectáreas de pino-encino en terreno escarpado con pendientes mayores a 45 grados. Dos helicópteros MI-17 de la Fuerza Aérea equipados con helibalde operando desde la Helibase San Antonio. 180 brigadistas en línea de fuego.',
       croquisPines: [
-        { id: 'fp1', tipo: 'PC', label: 'Puesto de Comando (Laguna de Sánchez)', x: 22, y: 35, color: '#f97316' },
-        { id: 'fp2', tipo: 'H', label: 'Helibase Principal San Antonio', x: 78, y: 30, color: '#3b82f6' },
-        { id: 'fp3', tipo: 'B', label: 'Base Operacional y Abastecimiento', x: 15, y: 65, color: '#10b981' },
-        { id: 'fp4', tipo: 'C', label: 'Campamento Brigadistas', x: 25, y: 78, color: '#8b5cf6' },
-        { id: 'fp5', tipo: 'PELIGRO', label: 'Frente Activo de Fuego Cañón del Huajuco', x: 60, y: 55, color: '#dc2626' }
+        { id: 'fp1', tipo: 'PC', label: 'Puesto de Comando (Laguna de Sánchez)', x: 22, y: 35, lat: 25.4190, lng: -100.2850, color: '#f97316', coordenadas: '25.4190° N, -100.2850° O' },
+        { id: 'fp2', tipo: 'H', label: 'Helibase Principal San Antonio', x: 78, y: 30, lat: 25.4220, lng: -100.2780, color: '#3b82f6', coordenadas: '25.4220° N, -100.2780° O' },
+        { id: 'fp3', tipo: 'B', label: 'Base Operacional y Abastecimiento', x: 15, y: 65, lat: 25.4150, lng: -100.2880, color: '#10b981', coordenadas: '25.4150° N, -100.2880° O' },
+        { id: 'fp4', tipo: 'C', label: 'Campamento Brigadistas', x: 25, y: 78, lat: 25.4120, lng: -100.2820, color: '#8b5cf6', coordenadas: '25.4120° N, -100.2820° O' },
+        { id: 'fp5', tipo: 'PELIGRO', label: 'Frente Activo de Fuego Cañón del Huajuco', x: 60, y: 55, lat: 25.4180, lng: -100.2810, color: '#dc2626', coordenadas: '25.4180° N, -100.2810° O' }
       ],
       croquisNotas: 'Helibase con capacidad para 3 aeronaves simultáneas. Tanques cisterna de 20,000L de agua con retardante.',
       objetivosIniciales: [
@@ -678,9 +678,9 @@ export const BLANK_INCIDENT_TEMPLATE: IncidentData = {
   sci201: {
     evaluacionInicial: '',
     croquisPines: [
-      { id: 'bp1', tipo: 'PC', label: 'Puesto de Comando (PC)', x: 30, y: 35, color: '#f97316' },
-      { id: 'bp2', tipo: 'E', label: 'Área de Espera (E)', x: 70, y: 30, color: '#eab308' },
-      { id: 'bp3', tipo: 'ACV', label: 'Área Concentración Víctimas (ACV)', x: 35, y: 70, color: '#ef4444' }
+      { id: 'bp1', tipo: 'PC', label: 'Puesto de Comando (PC)', x: 30, y: 35, lat: 20.8167, lng: -102.7667, color: '#f97316', coordenadas: '20.8167° N, -102.7667° O' },
+      { id: 'bp2', tipo: 'E', label: 'Área de Espera (E)', x: 70, y: 30, lat: 20.8185, lng: -102.7640, color: '#eab308', coordenadas: '20.8185° N, -102.7640° O' },
+      { id: 'bp3', tipo: 'ACV', label: 'Área Concentración Víctimas (ACV)', x: 35, y: 70, lat: 20.8145, lng: -102.7680, color: '#ef4444', coordenadas: '20.8145° N, -102.7680° O' }
     ],
     croquisNotas: '',
     objetivosIniciales: [
